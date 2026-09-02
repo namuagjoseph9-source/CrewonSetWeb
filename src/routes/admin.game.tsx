@@ -47,13 +47,10 @@ export function playerCode(id: number) {
   return `COS-${String(id).padStart(4, "0")}`;
 }
 
-const groups = ["Director", "Cameraman", "AV Technician", "Editor", "All-Rounder"];
-
 function GamePage() {
   const [notifications, setNotifications] = notificationsStore.useStore();
   const [target, setTarget] = useState<NotificationTargetKind>("all");
   const [selectedPlayers, setSelectedPlayers] = useState<number[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState(groups[0]);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [playerQuery, setPlayerQuery] = useState("");
@@ -98,8 +95,6 @@ function GamePage() {
         target:
           target === "players"
             ? { kind: "players", playerIds: selectedPlayers.map((id) => String(id)) }
-            : target === "group"
-            ? { kind: "group", group: selectedGroup }
             : { kind: "all" },
       },
       ...notifications,
@@ -614,7 +609,7 @@ function GamePage() {
           <div>
             <p className="form-label !text-white/60">TARGET</p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {(["all", "players", "group"] as NotificationTargetKind[]).map((option) => (
+              {(["all", "players"] as NotificationTargetKind[]).map((option) => (
                 <button
                   type="button"
                   key={option}
@@ -625,7 +620,7 @@ function GamePage() {
                       : "border-white/10 !text-white/50 hover:border-white/25"
                   }`}
                 >
-                  {option === "all" ? "All Players" : option === "players" ? "Specific Player(s)" : "Specific Group"}
+                  {option === "all" ? "All Players" : "Specific Player(s)"}
                 </button>
               ))}
             </div>
@@ -722,18 +717,6 @@ function GamePage() {
             </div>
           )}
 
-          {target === "group" && (
-            <select
-              value={selectedGroup}
-              onChange={(e) => setSelectedGroup(e.target.value)}
-              className="w-full max-w-xs rounded-md border border-white/10 bg-[#101923] px-3 py-2.5 text-sm font-bold !text-white outline-none focus:border-coral"
-            >
-              {groups.map((group) => (
-                <option key={group}>{group}</option>
-              ))}
-            </select>
-          )}
-
           <div className="flex flex-wrap gap-2">
             <button
               type="submit"
@@ -772,8 +755,6 @@ function GamePage() {
                 <span className="rounded bg-white/[0.06] px-2 py-1 text-[10px] font-black uppercase !text-white/50">
                   {a.target?.kind === "players"
                     ? `Specific Players (${a.target.playerIds?.length ?? 0})`
-                    : a.target?.kind === "group"
-                    ? `Group: ${a.target.group}`
                     : "All Players"}
                 </span>
               </div>
@@ -871,11 +852,7 @@ function GamePage() {
               <div className="rounded-md border border-white/[0.07] bg-[#101923] p-3">
                 <dt className="text-[10px] font-black uppercase tracking-wide !text-white/30">Audience</dt>
                 <dd className="mt-1 text-sm font-bold !text-white">
-                  {detail.target?.kind === "players"
-                    ? "Specific Players"
-                    : detail.target?.kind === "group"
-                    ? `Group: ${detail.target.group}`
-                    : "All Players"}
+                  {detail.target?.kind === "players" ? "Specific Players" : "All Players"}
                 </dd>
               </div>
             </dl>
@@ -904,9 +881,7 @@ function GamePage() {
                 </ul>
               ) : (
                 <p className="mt-2 text-sm !text-white/55">
-                  {detail.target?.kind === "group"
-                    ? `Every player in the ${detail.target.group} group received this announcement.`
-                    : "Every player in the game received this announcement."}
+                  Every player in the game received this announcement.
                 </p>
               )}
             </div>

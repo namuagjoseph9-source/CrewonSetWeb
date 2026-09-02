@@ -79,7 +79,7 @@ export function uid(prefix: string) {
 
 /* ------------------------------------------------------------ notifications */
 
-export type NotificationTargetKind = "all" | "players" | "group";
+export type NotificationTargetKind = "all" | "players";
 
 export type PlayerNotification = {
   id: string;
