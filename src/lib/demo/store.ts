@@ -79,7 +79,7 @@ export function uid(prefix: string) {
 
 /* ------------------------------------------------------------ notifications */
 
-export type NotificationTargetKind = "all" | "players" | "group";
+export type NotificationTargetKind = "all" | "players";
 
 export type PlayerNotification = {
   id: string;
@@ -166,6 +166,7 @@ export type PartnershipApplication = {
   duration: number;
   durationUnit: "Days" | "Months";
   email: string;
+  description?: string;
   submittedAt: string;
   status: PartnershipStatus;
 };
@@ -534,6 +535,10 @@ export type BugReport = {
   category: string;
   description: string;
   submittedAt: string;
+  /** Contact email supplied by the reporting player. */
+  email?: string;
+  /** File name of an optional image/PDF attachment. */
+  attachmentName?: string;
   /** Admin-only triage state. Never shown in the player portal. */
   status: BugStatus;
 };
@@ -581,6 +586,37 @@ export const bugReportsStore = createStore<BugReport>("cos.bugReports", [
     status: "Resolved",
   },
 ]);
+
+/* ---------------------------------------------------------- player reports */
+
+export type PlayerReportStatus = "New" | "Investigating" | "Resolved";
+
+export type PlayerReport = {
+  id: string;
+  reporterName: string;
+  reporterId: string;
+  reportType: string;
+  description: string;
+  submittedAt: string;
+  /** Contact email supplied by the reporting player. */
+  email?: string;
+  /** File name of an optional image/PDF attachment. */
+  attachmentName?: string;
+  /** Admin-only triage state. Never shown in the player portal. */
+  status: PlayerReportStatus;
+};
+
+export const playerReportTypes = [
+  "Trolling",
+  "Negative Attitude",
+  "Verbal Abuse",
+  "Other",
+];
+
+export const playerReportsStore = createStore<PlayerReport>(
+  "cos.playerReports",
+  []
+);
 
 /* --------------------------------------------------------- equipped loadout */
 
