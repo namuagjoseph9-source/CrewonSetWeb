@@ -19,9 +19,15 @@ export function PartnershipForm() {
     const duration = Number(data.get("duration"));
     const durationUnit = String(data.get("durationUnit") ?? "Days") as "Days" | "Months";
     const email = String(data.get("email") ?? "").trim();
+    const description = String(data.get("description") ?? "").trim();
 
     if (!productType || !exactModel || !email) {
       setError("Please fill in all required fields.");
+      return;
+    }
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      setError("Please enter a valid email address.");
       return;
     }
     if (!Number.isFinite(budget) || budget <= 0) {
@@ -31,6 +37,13 @@ export function PartnershipForm() {
     if (!Number.isFinite(duration) || duration <= 0) {
       setError("Please enter a valid advertisement duration.");
       return;
+    }
+    if (file) {
+      const isAllowed = file.type.startsWith("image/") || file.type === "application/pdf";
+      if (!isAllowed) {
+        setError("Attachments must be an image or a PDF file.");
+        return;
+      }
     }
 
     setError("");
@@ -46,6 +59,7 @@ export function PartnershipForm() {
       duration,
       durationUnit,
       email,
+      description,
       submittedAt: new Date().toISOString(),
       status: "Pending",
     };
@@ -90,12 +104,11 @@ export function PartnershipForm() {
           PRODUCT TYPE
           <select className="form-input" name="productType" required defaultValue="">
             <option value="" disabled>Select a product type</option>
-            <option>Food & Beverage</option>
-            <option>Technology</option>
-            <option>Entertainment</option>
-            <option>Fashion & Lifestyle</option>
-            <option>Automotive</option>
-            <option>Camera Gear</option>
+            <option>Camera</option>
+            <option>Lens</option>
+            <option>Lights</option>
+            <option>Audio</option>
+            <option>Software</option>
             <option>Other</option>
           </select>
         </label>
@@ -135,15 +148,25 @@ export function PartnershipForm() {
         </div>
 
         <label className="form-label sm:col-span-2">
-          FILE ATTACHMENT
+          DESCRIPTION
+          <textarea
+            className="form-input min-h-[120px] resize-y"
+            name="description"
+            rows={5}
+            placeholder="Tell us about your product and how you'd like to collaborate."
+          />
+        </label>
+
+        <label className="form-label sm:col-span-2">
+          FILE ATTACHMENT (OPTIONAL)
           <span className="mt-2 flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed border-navy/15 bg-navy/[.025] px-4 py-4 text-sm transition hover:border-coral hover:bg-coral/[.03]">
             <FileImage className="size-5 shrink-0 text-coral" />
             <span className="min-w-0 flex-1 truncate font-bold">
-              {file ? file.name : "Choose a file (image, PDF, or ZIP)"}
+              {file ? file.name : "Choose a file (image or PDF only)"}
             </span>
             <input
               type="file"
-              accept="image/*,.pdf,.zip"
+              accept="image/*,application/pdf,.pdf"
               className="sr-only"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             />

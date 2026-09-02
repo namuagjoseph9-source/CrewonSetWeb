@@ -166,6 +166,7 @@ export type PartnershipApplication = {
   duration: number;
   durationUnit: "Days" | "Months";
   email: string;
+  description?: string;
   submittedAt: string;
   status: PartnershipStatus;
 };
