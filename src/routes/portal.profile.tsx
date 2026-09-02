@@ -58,17 +58,7 @@ function readProfileAccount(): ProfileAccount {
   }
 }
 
-const roles = [
-  "Director",
-  "Cameraman",
-  "AV Technician",
-  "Editor",
-  "All-Rounder",
-];
-
 function CrewProfilePage() {
-  const [role, setRole] = useState("Cameraman");
-
   const [transactions] = transactionsStore.useStore();
   const [loadout] = loadoutStore.useStore();
 
@@ -330,12 +320,6 @@ function CrewProfilePage() {
                   <span className="rounded-full border border-yellow/20 bg-yellow/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.12em] text-yellow">
                     Level 27
                   </span>
-                </div>
-
-                {/* ROLE */}
-
-                <div className="mt-3 inline-flex rounded-md border border-coral/20 bg-coral/10 px-3 py-2 text-xs font-black uppercase text-coral">
-                  {role}
                 </div>
 
                 {/* XP */}
@@ -860,36 +844,6 @@ function CrewProfilePage() {
                   placeholder="Tell your crew something about yourself..."
                   className="mt-3 w-full resize-none rounded-lg border border-white/10 bg-[#0d121c] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-white/20 focus:border-coral focus:ring-4 focus:ring-coral/10"
                 />
-              </div>
-
-              {/* =================================================
-                  ROLE
-              ================================================= */}
-
-              <div>
-                <label
-                  htmlFor="profile-role"
-                  className="text-xs font-black uppercase tracking-[0.15em] text-white/40"
-                >
-                  Primary Role
-                </label>
-
-                <select
-                  id="profile-role"
-                  value={role}
-                  onChange={(event) => setRole(event.target.value)}
-                  className="mt-3 w-full rounded-lg border border-white/10 bg-[#0d121c] px-4 py-3 text-sm font-bold text-white outline-none transition focus:border-coral focus:ring-4 focus:ring-coral/10"
-                >
-                  {roles.map((roleOption) => (
-                    <option
-                      key={roleOption}
-                      value={roleOption}
-                      className="bg-[#151c29]"
-                    >
-                      {roleOption}
-                    </option>
-                  ))}
-                </select>
               </div>
 
               {/* =================================================

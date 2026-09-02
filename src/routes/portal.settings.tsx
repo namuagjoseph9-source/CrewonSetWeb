@@ -20,9 +20,11 @@ import {
   Check,
   Eye,
   EyeOff,
+  Flag,
   LoaderCircle,
   Lock,
   Monitor,
+  Paperclip,
   RotateCcw,
   Save,
   Shield,
@@ -30,7 +32,27 @@ import {
   UserCircle,
   X,
 } from "lucide-react";
-import { bugCategories, bugReportsStore, uid } from "@/lib/demo/store";
+import {
+  bugCategories,
+  bugReportsStore,
+  playerReportsStore,
+  playerReportTypes,
+  uid,
+} from "@/lib/demo/store";
+
+/** Accepted attachment MIME types for reports: images and PDF only. */
+const ACCEPTED_ATTACHMENT_TYPES = ["image/", "application/pdf"];
+
+/** Validates that a file is an image or PDF (ZIP and everything else rejected). */
+function isAllowedAttachment(file: File): boolean {
+  return ACCEPTED_ATTACHMENT_TYPES.some(
+    (type) =>
+      file.type === type ||
+      file.type.startsWith(type) ||
+      (type === "application/pdf" &&
+        file.name.toLowerCase().endsWith(".pdf"))
+  );
+}
 
 /** Demo player identity used for player-submitted bug reports. */
 const BUG_REPORT_PLAYER_NAME = "CAMERA_PRO";
@@ -143,9 +165,22 @@ function SettingsPage() {
 
   const [bugReportOpen, setBugReportOpen] = useState(false);
   const [bugCategory, setBugCategory] = useState("");
+  const [bugEmail, setBugEmail] = useState("");
   const [bugDescription, setBugDescription] = useState("");
+  const [bugAttachment, setBugAttachment] = useState<File | null>(null);
   const [bugError, setBugError] = useState("");
   const [bugSubmitted, setBugSubmitted] = useState(false);
+  const bugAttachmentInput = useRef<HTMLInputElement>(null);
+
+  const [playerReportOpen, setPlayerReportOpen] = useState(false);
+  const [playerReportType, setPlayerReportType] = useState("");
+  const [playerReportEmail, setPlayerReportEmail] = useState("");
+  const [playerReportDescription, setPlayerReportDescription] = useState("");
+  const [playerReportAttachment, setPlayerReportAttachment] =
+    useState<File | null>(null);
+  const [playerReportError, setPlayerReportError] = useState("");
+  const [playerReportSubmitted, setPlayerReportSubmitted] = useState(false);
+  const playerReportAttachmentInput = useRef<HTMLInputElement>(null);
 
 
   const [message, setMessage] = useState("");
@@ -523,7 +558,9 @@ function SettingsPage() {
 
   const openBugReport = () => {
     setBugCategory("");
+    setBugEmail("");
     setBugDescription("");
+    setBugAttachment(null);
     setBugError("");
     setBugSubmitted(false);
     setBugReportOpen(true);
@@ -532,9 +569,29 @@ function SettingsPage() {
   const closeBugReport = () => {
     setBugReportOpen(false);
     setBugCategory("");
+    setBugEmail("");
     setBugDescription("");
+    setBugAttachment(null);
     setBugError("");
     setBugSubmitted(false);
+  };
+
+  const handleBugAttachmentChange = (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setBugAttachment(null);
+      return;
+    }
+    if (!isAllowedAttachment(file)) {
+      setBugError("Only image or PDF files are allowed.");
+      setBugAttachment(null);
+      event.target.value = "";
+      return;
+    }
+    setBugError("");
+    setBugAttachment(file);
   };
 
   const submitBugReport = () => {
@@ -545,8 +602,18 @@ function SettingsPage() {
       return;
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bugEmail.trim())) {
+      setBugError("Please enter a valid email address.");
+      return;
+    }
+
     if (!bugDescription.trim()) {
       setBugError("Please describe the bug.");
+      return;
+    }
+
+    if (bugAttachment && !isAllowedAttachment(bugAttachment)) {
+      setBugError("Only image or PDF files are allowed.");
       return;
     }
 
@@ -558,14 +625,108 @@ function SettingsPage() {
         playerId: BUG_REPORT_PLAYER_ID,
         category: bugCategory,
         description: bugDescription.trim(),
+        email: bugEmail.trim(),
+        attachmentName: bugAttachment?.name,
         submittedAt: new Date().toISOString(),
         status: "New",
       },
     ]);
 
     setBugCategory("");
+    setBugEmail("");
     setBugDescription("");
+    setBugAttachment(null);
     setBugSubmitted(true);
+  };
+
+  /* =========================================================
+     PLAYER REPORT
+  ========================================================= */
+
+  const openPlayerReport = () => {
+    setPlayerReportType("");
+    setPlayerReportEmail("");
+    setPlayerReportDescription("");
+    setPlayerReportAttachment(null);
+    setPlayerReportError("");
+    setPlayerReportSubmitted(false);
+    setPlayerReportOpen(true);
+  };
+
+  const closePlayerReport = () => {
+    setPlayerReportOpen(false);
+    setPlayerReportType("");
+    setPlayerReportEmail("");
+    setPlayerReportDescription("");
+    setPlayerReportAttachment(null);
+    setPlayerReportError("");
+    setPlayerReportSubmitted(false);
+  };
+
+  const handlePlayerReportAttachmentChange = (
+    event: ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setPlayerReportAttachment(null);
+      return;
+    }
+    if (!isAllowedAttachment(file)) {
+      setPlayerReportError("Only image or PDF files are allowed.");
+      setPlayerReportAttachment(null);
+      event.target.value = "";
+      return;
+    }
+    setPlayerReportError("");
+    setPlayerReportAttachment(file);
+  };
+
+  const submitPlayerReport = () => {
+    setPlayerReportError("");
+
+    if (!playerReportType.trim()) {
+      setPlayerReportError("Please choose a report type.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(playerReportEmail.trim())) {
+      setPlayerReportError("Please enter a valid email address.");
+      return;
+    }
+
+    if (!playerReportDescription.trim()) {
+      setPlayerReportError("Please describe the issue.");
+      return;
+    }
+
+    if (
+      playerReportAttachment &&
+      !isAllowedAttachment(playerReportAttachment)
+    ) {
+      setPlayerReportError("Only image or PDF files are allowed.");
+      return;
+    }
+
+    playerReportsStore.set([
+      ...playerReportsStore.get(),
+      {
+        id: uid("PRPT"),
+        reporterName: BUG_REPORT_PLAYER_NAME,
+        reporterId: BUG_REPORT_PLAYER_ID,
+        reportType: playerReportType,
+        description: playerReportDescription.trim(),
+        email: playerReportEmail.trim(),
+        attachmentName: playerReportAttachment?.name,
+        submittedAt: new Date().toISOString(),
+        status: "New",
+      },
+    ]);
+
+    setPlayerReportType("");
+    setPlayerReportEmail("");
+    setPlayerReportDescription("");
+    setPlayerReportAttachment(null);
+    setPlayerReportSubmitted(true);
   };
 
   /* =========================================================
@@ -1252,46 +1413,95 @@ function SettingsPage() {
             ================================================= */}
 
             {section === "Support" && (
-              <section className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#151c29]">
+              <div className="space-y-6">
 
-                <div className="flex flex-col justify-between gap-4 border-b border-white/[0.07] p-7 sm:flex-row sm:items-center">
+                {/* REPORT A BUG */}
 
-                  <div>
+                <section className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#151c29]">
 
-                    <p className="text-[10px] font-black uppercase tracking-[.18em] text-coral">
-                      SUPPORT
-                    </p>
+                  <div className="flex flex-col justify-between gap-4 border-b border-white/[0.07] p-7 sm:flex-row sm:items-center">
 
-                    <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-white">
-                      Report a Bug
-                    </h2>
+                    <div>
 
-                    <p className="mt-2 text-sm text-white/40">
-                      Run into a glitch on set? Let the crew know so we can
-                      fix it.
-                    </p>
+                      <p className="text-[10px] font-black uppercase tracking-[.18em] text-coral">
+                        SUPPORT
+                      </p>
+
+                      <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-white">
+                        Report a Bug
+                      </h2>
+
+                      <p className="mt-2 text-sm text-white/40">
+                        Run into a glitch on set? Let the crew know so we can
+                        fix it.
+                      </p>
+
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={openBugReport}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-coral px-4 py-2.5 text-xs font-black text-white transition hover:opacity-90"
+                    >
+                      <Bug className="size-4" />
+                      REPORT A BUG
+                    </button>
 
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={openBugReport}
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-coral px-4 py-2.5 text-xs font-black text-white transition hover:opacity-90"
-                  >
-                    <Bug className="size-4" />
-                    REPORT A BUG
-                  </button>
+                  <div className="p-7">
+                    <p className="text-sm text-white/40">
+                      Include as much detail as possible — what you were
+                      doing, what happened, and how to reproduce it.
+                    </p>
+                  </div>
 
-                </div>
+                </section>
 
-                <div className="p-7">
-                  <p className="text-sm text-white/40">
-                    Include as much detail as possible — what you were
-                    doing, what happened, and how to reproduce it.
-                  </p>
-                </div>
+                {/* REPORT A PLAYER */}
 
-              </section>
+                <section className="overflow-hidden rounded-xl border border-white/[0.07] bg-[#151c29]">
+
+                  <div className="flex flex-col justify-between gap-4 border-b border-white/[0.07] p-7 sm:flex-row sm:items-center">
+
+                    <div>
+
+                      <p className="text-[10px] font-black uppercase tracking-[.18em] text-coral">
+                        SAFETY
+                      </p>
+
+                      <h2 className="mt-2 text-2xl font-black uppercase tracking-tight text-white">
+                        Report a Player
+                      </h2>
+
+                      <p className="mt-2 text-sm text-white/40">
+                        Experienced bad behavior on set? Flag it so our crew
+                        can review and take action.
+                      </p>
+
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={openPlayerReport}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-coral px-4 py-2.5 text-xs font-black text-white transition hover:opacity-90"
+                    >
+                      <Flag className="size-4" />
+                      REPORT A PLAYER
+                    </button>
+
+                  </div>
+
+                  <div className="p-7">
+                    <p className="text-sm text-white/40">
+                      Reports are confidential. Include as much detail as
+                      possible so the crew can investigate fairly.
+                    </p>
+                  </div>
+
+                </section>
+
+              </div>
             )}
 
           </main>
@@ -1374,6 +1584,18 @@ function SettingsPage() {
                   </label>
 
                   <label className="block text-[10px] font-black uppercase tracking-wider text-white/35">
+                    Email
+
+                    <input
+                      type="email"
+                      value={bugEmail}
+                      onChange={(event) => setBugEmail(event.target.value)}
+                      placeholder="you@example.com"
+                      className="mt-2 w-full rounded-md border border-white/10 bg-[#0d121c] px-3 py-3 text-sm font-bold text-white outline-none placeholder:text-white/15 focus:border-coral"
+                    />
+                  </label>
+
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/35">
                     Bug Description
 
                     <textarea
@@ -1384,6 +1606,50 @@ function SettingsPage() {
                       className="mt-2 w-full resize-none rounded-md border border-white/10 bg-[#0d121c] px-3 py-3 text-sm font-bold text-white outline-none placeholder:text-white/15 focus:border-coral"
                     />
                   </label>
+
+                  <div className="text-[10px] font-black uppercase tracking-wider text-white/35">
+                    Attachment
+                    <span className="ml-1 normal-case text-white/25">
+                      (optional — image or PDF)
+                    </span>
+
+                    <input
+                      ref={bugAttachmentInput}
+                      type="file"
+                      accept="image/*,application/pdf,.pdf"
+                      onChange={handleBugAttachmentChange}
+                      className="hidden"
+                    />
+
+                    <div className="mt-2 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => bugAttachmentInput.current?.click()}
+                        className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-[#0d121c] px-3 py-2.5 text-xs font-black text-white/70 transition hover:border-coral/40 hover:text-white"
+                      >
+                        <Paperclip className="size-4" />
+                        {bugAttachment ? "CHANGE FILE" : "ADD FILE"}
+                      </button>
+
+                      {bugAttachment && (
+                        <span className="flex min-w-0 items-center gap-2 text-xs font-bold text-white/60">
+                          <span className="truncate">{bugAttachment.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBugAttachment(null);
+                              if (bugAttachmentInput.current)
+                                bugAttachmentInput.current.value = "";
+                            }}
+                            className="text-white/40 transition hover:text-coral"
+                            aria-label="Remove attachment"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
                 </div>
 
@@ -1400,6 +1666,188 @@ function SettingsPage() {
                   <button
                     type="button"
                     onClick={submitBugReport}
+                    className="rounded-md bg-coral px-4 py-2.5 text-xs font-black text-white transition hover:opacity-90"
+                  >
+                    SUBMIT REPORT
+                  </button>
+
+                </div>
+              </>
+            )}
+
+          </section>
+
+        </div>
+      )}
+
+      {/* =========================================================
+          REPORT A PLAYER MODAL
+      ========================================================= */}
+
+      {playerReportOpen && (
+        <div
+          className="fixed inset-0 z-[70] grid place-items-center bg-[#05080d]/85 p-5 backdrop-blur-md"
+          onClick={closePlayerReport}
+        >
+
+          <section
+            role="dialog"
+            aria-modal="true"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-white/[0.09] bg-[#151c29] p-6 shadow-2xl shadow-black/50"
+            onClick={(event) => event.stopPropagation()}
+          >
+
+            <div className="flex items-start justify-between gap-4">
+              <div className="grid size-11 shrink-0 place-items-center rounded-md bg-coral/10 text-coral">
+                <Flag className="size-5" />
+              </div>
+
+              <button
+                type="button"
+                onClick={closePlayerReport}
+                className="rounded-md p-1 text-white/40 transition hover:bg-white/[0.06] hover:text-white"
+                aria-label="Close"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <h2 className="mt-5 text-2xl font-black uppercase tracking-tight text-white">
+              Report a Player
+            </h2>
+
+            <p className="mt-2 text-sm leading-relaxed text-white/45">
+              Tell us what happened. Reports are confidential and reviewed by
+              our crew.
+            </p>
+
+            {playerReportSubmitted ? (
+              <div className="mt-6 flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-300">
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">
+                  <Check className="size-4" />
+                </span>
+                Thanks! Your player report has been submitted.
+              </div>
+            ) : (
+              <>
+                {playerReportError && (
+                  <div className="mt-4 rounded-md border border-coral/20 bg-coral/10 p-3 text-sm font-bold text-coral">
+                    {playerReportError}
+                  </div>
+                )}
+
+                <div className="mt-5 space-y-4">
+
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/35">
+                    Report Type
+
+                    <select
+                      value={playerReportType}
+                      onChange={(event) =>
+                        setPlayerReportType(event.target.value)
+                      }
+                      className="mt-2 w-full rounded-md border border-white/10 bg-[#0d121c] px-3 py-3 text-sm font-bold text-white outline-none focus:border-coral"
+                    >
+                      <option value="">Select a report type</option>
+                      {playerReportTypes.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/35">
+                    Email
+
+                    <input
+                      type="email"
+                      value={playerReportEmail}
+                      onChange={(event) =>
+                        setPlayerReportEmail(event.target.value)
+                      }
+                      placeholder="you@example.com"
+                      className="mt-2 w-full rounded-md border border-white/10 bg-[#0d121c] px-3 py-3 text-sm font-bold text-white outline-none placeholder:text-white/15 focus:border-coral"
+                    />
+                  </label>
+
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/35">
+                    Description
+
+                    <textarea
+                      value={playerReportDescription}
+                      onChange={(event) =>
+                        setPlayerReportDescription(event.target.value)
+                      }
+                      placeholder="Describe what happened, including who was involved and when..."
+                      rows={5}
+                      className="mt-2 w-full resize-none rounded-md border border-white/10 bg-[#0d121c] px-3 py-3 text-sm font-bold text-white outline-none placeholder:text-white/15 focus:border-coral"
+                    />
+                  </label>
+
+                  <div className="text-[10px] font-black uppercase tracking-wider text-white/35">
+                    Attachment
+                    <span className="ml-1 normal-case text-white/25">
+                      (optional — image or PDF)
+                    </span>
+
+                    <input
+                      ref={playerReportAttachmentInput}
+                      type="file"
+                      accept="image/*,application/pdf,.pdf"
+                      onChange={handlePlayerReportAttachmentChange}
+                      className="hidden"
+                    />
+
+                    <div className="mt-2 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          playerReportAttachmentInput.current?.click()
+                        }
+                        className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-[#0d121c] px-3 py-2.5 text-xs font-black text-white/70 transition hover:border-coral/40 hover:text-white"
+                      >
+                        <Paperclip className="size-4" />
+                        {playerReportAttachment ? "CHANGE FILE" : "ADD FILE"}
+                      </button>
+
+                      {playerReportAttachment && (
+                        <span className="flex min-w-0 items-center gap-2 text-xs font-bold text-white/60">
+                          <span className="truncate">
+                            {playerReportAttachment.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPlayerReportAttachment(null);
+                              if (playerReportAttachmentInput.current)
+                                playerReportAttachmentInput.current.value = "";
+                            }}
+                            className="text-white/40 transition hover:text-coral"
+                            aria-label="Remove attachment"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+
+                <div className="mt-6 flex justify-end gap-2">
+
+                  <button
+                    type="button"
+                    onClick={closePlayerReport}
+                    className="rounded-md border border-white/10 px-4 py-2.5 text-xs font-black text-white/45 transition hover:bg-white/[0.04] hover:text-white"
+                  >
+                    CANCEL
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={submitPlayerReport}
                     className="rounded-md bg-coral px-4 py-2.5 text-xs font-black text-white transition hover:opacity-90"
                   >
                     SUBMIT REPORT
